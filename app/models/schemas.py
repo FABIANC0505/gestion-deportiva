@@ -38,6 +38,20 @@ class ExpressRegisterResponse(BaseModel):
     qr_payload: str
 
 
+class StaffLoginRequest(BaseModel):
+    access_code: str = Field(..., min_length=6, max_length=80)
+    alias: str = Field(default="Staff", min_length=2, max_length=40)
+    role: Role = Role.STAFF
+
+
+class TokenResponse(BaseModel):
+    user_id: UUID
+    alias: str
+    role: Role
+    access_token: str
+    token_type: Literal["bearer"] = "bearer"
+
+
 class CheckRequest(BaseModel):
     user_id: UUID
     reason: str | None = Field(default=None, max_length=120)

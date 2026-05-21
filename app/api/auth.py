@@ -1,11 +1,12 @@
 from datetime import UTC, datetime
+from os import getenv
 from uuid import uuid4
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, HTTPException
 
-from app.core.security import create_access_token, require_roles
+from app.core.security import create_access_token
 from app.core.store import store
-from app.models.schemas import ExpressRegisterRequest, ExpressRegisterResponse, Role, UserStatus
+from app.models.schemas import ExpressRegisterRequest, ExpressRegisterResponse, Role, StaffLoginRequest, TokenResponse, UserStatus
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
@@ -35,16 +36,29 @@ async def register_express(payload: ExpressRegisterRequest) -> ExpressRegisterRe
     )
 
 
-@router.post("/dev-token/{role}", include_in_schema=False)
-async def create_dev_token(role: Role, _: dict = Depends(require_roles(Role.ADMIN))):
+@router.post("/staff-login", response_model=TokenResponse)
+async def staff_login(payload: StaffLoginRequest) -> TokenResponse:
+    expected_code = getenv("WORKCALIST_STAFF_ACCESS_CODE", "STAFF-LOCAL-2026")
+    if payload.access_code != expected_code:
+        raise HTTPException(status_code=401, detail="Codigo de staff invalido")
+    if payload.role not in {Role.ADMIN, Role.STAFF}:
+        raise HTTPException(status_code=400, detail="Rol staff invalido")
+
     user_id = uuid4()
-    store.users[user_id] = {
+    user = {
         "id": user_id,
-        "alias": f"dev-{role.value}",
-        "role": role,
+        "alias": payload.alias.strip(),
+        "role": payload.role,
         "status": UserStatus.ACTIVE,
         "created_at": datetime.now(UTC),
         "last_check_in_at": None,
         "last_check_out_at": None,
     }
-    return {"access_token": create_access_token(user_id, role), "token_type": "bearer"}
+    store.users[user_id] = user
+
+    return TokenResponse(
+        user_id=user_id,
+        alias=user["alias"],
+        role=user["role"],
+        access_token=create_access_token(user_id=user_id, role=user["role"]),
+    )
