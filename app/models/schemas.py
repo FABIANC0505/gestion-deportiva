@@ -38,10 +38,14 @@ class ExpressRegisterResponse(BaseModel):
     qr_payload: str
 
 
-class StaffLoginRequest(BaseModel):
+class RoleRegisterRequest(BaseModel):
     access_code: str = Field(..., min_length=6, max_length=80)
     alias: str = Field(default="Staff", min_length=2, max_length=40)
     role: Role = Role.STAFF
+
+
+class StaffLoginRequest(RoleRegisterRequest):
+    pass
 
 
 class TokenResponse(BaseModel):

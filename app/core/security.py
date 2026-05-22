@@ -5,11 +5,12 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
 
+from app.core.config import settings
 from app.core.store import store
 from app.models.schemas import Role, UserStatus
 
 
-SECRET_KEY = "change-me-with-a-real-secret-from-env"
+SECRET_KEY = settings.jwt_secret
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_HOURS = 24 * 30
 
@@ -40,7 +41,7 @@ def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
 ) -> dict:
     payload = decode_token(credentials.credentials)
-    user = store.users.get(UUID(payload["sub"]))
+    user = store.get_user(UUID(payload["sub"]))
     if not user:
         raise HTTPException(status_code=401, detail="Usuario no encontrado")
     return user

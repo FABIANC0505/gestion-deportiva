@@ -25,6 +25,13 @@ export function registerExpress(alias) {
   });
 }
 
+export function registerRole({ alias, role, accessCode }) {
+  return apiRequest("/api/auth/register-role", {
+    method: "POST",
+    body: { alias, role, access_code: accessCode },
+  });
+}
+
 export function sendHype(token, eventId, clicks = 1) {
   return apiRequest("/api/interaction/hype", {
     token,

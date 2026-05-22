@@ -4,6 +4,7 @@ import AuthExpress from "./components/AuthExpress.js";
 import HypeTrivia from "./components/HypeTrivia.js";
 import LiveVoting from "./components/LiveVoting.js";
 import RadarChartComponent from "./components/RadarChartComponent.js";
+import RoleRegistry from "./components/RoleRegistry.js";
 import { LiveSocket } from "./services/websocket.js";
 
 const FALLBACK_EVENT = {
@@ -74,10 +75,15 @@ export default function App() {
         <button className={view === "event" ? "nav-active" : ""} onClick={() => setView("event")}>
           Evento
         </button>
+        <button className={view === "roles" ? "nav-active" : ""} onClick={() => setView("roles")}>
+          Roles
+        </button>
         <span className={`socket-dot ${socketStatus}`}>{socketStatus}</span>
       </nav>
 
-      {view === "public" ? (
+      {view === "roles" ? (
+        <RoleRegistry />
+      ) : view === "public" ? (
         <div className="mobile-flow">
           <AuthExpress session={session} onSession={setSession} />
           {session ? (

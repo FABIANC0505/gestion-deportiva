@@ -15,15 +15,20 @@ async def check_in(
     payload: CheckRequest,
     staff_user: dict = Depends(require_roles(Role.ADMIN, Role.STAFF)),
 ) -> AttendanceResponse:
-    user = store.users.get(payload.user_id)
+    user = store.get_user(payload.user_id)
     if not user:
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
     if user["role"] != Role.USER:
         raise HTTPException(status_code=400, detail="Solo el publico usa check-in fisico")
 
     checked_at = datetime.now(UTC)
-    user["status"] = UserStatus.ACTIVE
-    user["last_check_in_at"] = checked_at
+    user = store.update_user(
+        payload.user_id,
+        {
+            "status": UserStatus.ACTIVE,
+            "last_check_in_at": checked_at,
+        },
+    )
     store.mark_attendance(payload.user_id, "check-in", checked_at, staff_user["id"], payload.reason)
 
     active_users = store.active_user_count()
@@ -51,15 +56,20 @@ async def check_out(
     payload: CheckRequest,
     staff_user: dict = Depends(require_roles(Role.ADMIN, Role.STAFF)),
 ) -> AttendanceResponse:
-    user = store.users.get(payload.user_id)
+    user = store.get_user(payload.user_id)
     if not user:
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
     if user["role"] != Role.USER:
         raise HTTPException(status_code=400, detail="Solo el publico usa check-out fisico")
 
     checked_at = datetime.now(UTC)
-    user["status"] = UserStatus.INACTIVE
-    user["last_check_out_at"] = checked_at
+    user = store.update_user(
+        payload.user_id,
+        {
+            "status": UserStatus.INACTIVE,
+            "last_check_out_at": checked_at,
+        },
+    )
     store.mark_attendance(payload.user_id, "check-out", checked_at, staff_user["id"], payload.reason)
 
     active_users = store.active_user_count()

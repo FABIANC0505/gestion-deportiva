@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api import attendance, auth, interaction, scoring, websocket
+from app.core.store import store
 
 
 app = FastAPI(
@@ -27,4 +28,7 @@ app.include_router(websocket.router)
 
 @app.get("/health")
 async def health_check() -> dict:
-    return {"status": "ok"}
+    return {
+        "status": "ok",
+        "database": "supabase" if store.persistent else "memory",
+    }
