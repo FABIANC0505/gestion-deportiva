@@ -48,6 +48,12 @@ class StaffLoginRequest(RoleRegisterRequest):
     pass
 
 
+class AdminRegisterRoleRequest(BaseModel):
+    alias: str = Field(..., min_length=2, max_length=40)
+    role: Role = Role.STAFF
+
+
+
 class TokenResponse(BaseModel):
     user_id: UUID
     alias: str
@@ -93,6 +99,7 @@ class JudgeScoreInput(BaseModel):
 
 
 class FinalScoreInput(BaseModel):
+    competitor_id: UUID | None = None
     modality: Modality
     judge_scores: list[JudgeScoreInput] = Field(..., min_length=1)
     public_score: float = Field(..., ge=0, le=10)
@@ -103,3 +110,61 @@ class FinalScoreResponse(BaseModel):
     judges_component: float
     public_component: float
     final_score: float
+
+
+class UserResponse(BaseModel):
+    id: UUID
+    alias: str
+    role: Role
+    status: UserStatus
+    created_at: datetime
+    last_check_in_at: datetime | None
+    last_check_out_at: datetime | None
+
+
+class UserUpdateRequest(BaseModel):
+    alias: str | None = Field(default=None, min_length=2, max_length=40)
+    role: Role | None = None
+    status: UserStatus | None = None
+
+
+class CompetitionStateInput(BaseModel):
+    competitor_id: UUID | None = None
+    competitor_name: str | None = None
+    modality: Modality
+
+
+class TriviaOption(BaseModel):
+    id: str
+    label: str
+
+
+class LaunchTriviaInput(BaseModel):
+    trivia_id: str
+    question: str
+    options: list[TriviaOption]
+
+
+class FavoriteVoteRequest(BaseModel):
+    competitor_id: UUID
+
+
+class PrizeVoteRequest(BaseModel):
+    option_id: str
+
+
+class PollOption(BaseModel):
+    id: str
+    label: str
+
+
+class LaunchPollRequest(BaseModel):
+    question: str
+    options: list[PollOption]
+
+
+class PollVoteRequest(BaseModel):
+    option_id: str
+
+
+

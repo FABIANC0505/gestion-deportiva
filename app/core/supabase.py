@@ -42,6 +42,10 @@ class SupabaseRestClient:
         )
         return rows[0] if rows else payload
 
+    def delete(self, table: str, filters: dict[str, str]) -> list[dict]:
+        return self._request("DELETE", table, query=filters)
+
+
     def _request(
         self,
         method: str,

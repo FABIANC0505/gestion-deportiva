@@ -28,7 +28,20 @@ app.include_router(websocket.router)
 
 @app.get("/health")
 async def health_check() -> dict:
+    database = "supabase" if store.persistent else "memory"
+    database_ready = True
+    database_error = None
+
+    if store.persistent:
+        try:
+            store.active_user_count()
+        except Exception as exc:
+            database_ready = False
+            database_error = str(exc)
+
     return {
         "status": "ok",
-        "database": "supabase" if store.persistent else "memory",
+        "database": database,
+        "database_ready": database_ready,
+        "database_error": database_error,
     }
