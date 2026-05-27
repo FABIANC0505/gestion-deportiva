@@ -201,6 +201,35 @@ export default function App() {
               <div className="live-card">
                 <h2>{session.alias}</h2>
                 <p className="muted">Compite y mantente al tanto del Leaderboard en la pestaña de Evento.</p>
+                
+                {(session.weight || session.category) && (
+                  <div 
+                    style={{ 
+                      marginTop: "16px", 
+                      padding: "12px", 
+                      background: "var(--panel-soft)", 
+                      borderRadius: "8px", 
+                      border: "1px solid var(--line)",
+                      display: "flex",
+                      gap: "20px",
+                      flexWrap: "wrap"
+                    }}
+                  >
+                    {session.weight && (
+                      <div>
+                        <span className="eyebrow" style={{ display: "block", fontSize: "0.75rem" }}>⚖️ Peso</span>
+                        <strong>{session.weight} kg</strong>
+                      </div>
+                    )}
+                    {session.category && (
+                      <div>
+                        <span className="eyebrow" style={{ display: "block", fontSize: "0.75rem" }}>🏷️ Categoría</span>
+                        <strong>{session.category}</strong>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 <div style={{ marginTop: "20px" }}>
                   <RadarChartComponent competitors={eventState.competitors.filter(c => c.name === session.alias)} />
                 </div>

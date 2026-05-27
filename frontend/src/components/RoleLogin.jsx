@@ -2,8 +2,8 @@ import { useState } from "react";
 import { apiRequest } from "../services/api.js";
 
 export default function RoleLogin({ onLogin }) {
-  const [alias, setAlias] = useState("");
-  const [accessCode, setAccessCode] = useState("STAFF-LOCAL-2026");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -13,14 +13,12 @@ export default function RoleLogin({ onLogin }) {
     setLoading(true);
 
     try {
-      // Calls staff-login endpoint which checks access code and pre-registered alias.
-      // If no admin exists in the system and role = admin, it bootstraps it!
+      // Calls staff-login endpoint which checks username and password.
       const session = await apiRequest("/api/auth/staff-login", {
         method: "POST",
         body: { 
-          alias: alias.trim(), 
-          access_code: accessCode,
-          role: "admin" // Send role = admin in case of bootstrap fallback
+          username: username.trim(), 
+          password: password
         },
       });
       localStorage.setItem("workcalist.session", JSON.stringify(session));
@@ -37,16 +35,16 @@ export default function RoleLogin({ onLogin }) {
       <div className="role-heading">
         <p className="eyebrow">Acceso Operativo</p>
         <h1>Ingreso del Personal</h1>
-        <p className="muted">Inicia sesión como Administrador, Juez, Staff o Competidor usando tu alias registrado y el código del evento.</p>
+        <p className="muted">Inicia sesión como Administrador, Juez, Staff o Competidor usando tus credenciales registradas.</p>
       </div>
 
       <form className="role-form" onSubmit={handleSubmit}>
         <label>
-          Alias registrado
+          Nombre de usuario
           <input
-            value={alias}
-            onChange={(event) => setAlias(event.target.value)}
-            placeholder="Ej: Juez Fuerza 1, Staff Entrada"
+            value={username}
+            onChange={(event) => setUsername(event.target.value)}
+            placeholder="Ej: admin, juez_fuerza"
             minLength={2}
             maxLength={40}
             required
@@ -55,12 +53,12 @@ export default function RoleLogin({ onLogin }) {
         </label>
 
         <label>
-          Código de acceso del evento
+          Contraseña
           <input
-            value={accessCode}
-            onChange={(event) => setAccessCode(event.target.value)}
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
             type="password"
-            minLength={6}
+            minLength={4}
             maxLength={80}
             required
             autoComplete="current-password"

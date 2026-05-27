@@ -44,14 +44,18 @@ class RoleRegisterRequest(BaseModel):
     role: Role = Role.STAFF
 
 
-class StaffLoginRequest(RoleRegisterRequest):
-    pass
+class StaffLoginRequest(BaseModel):
+    username: str = Field(..., min_length=2, max_length=40)
+    password: str = Field(..., min_length=4, max_length=80)
 
 
 class AdminRegisterRoleRequest(BaseModel):
     alias: str = Field(..., min_length=2, max_length=40)
     role: Role = Role.STAFF
-
+    username: str = Field(..., min_length=2, max_length=40)
+    password: str = Field(..., min_length=4, max_length=80)
+    weight: float | None = Field(default=None, ge=0)
+    category: str | None = Field(default=None, max_length=40)
 
 
 class TokenResponse(BaseModel):
@@ -60,6 +64,9 @@ class TokenResponse(BaseModel):
     role: Role
     access_token: str
     token_type: Literal["bearer"] = "bearer"
+    username: str | None = None
+    weight: float | None = None
+    category: str | None = None
 
 
 class CheckRequest(BaseModel):
@@ -120,12 +127,19 @@ class UserResponse(BaseModel):
     created_at: datetime
     last_check_in_at: datetime | None
     last_check_out_at: datetime | None
+    username: str | None = None
+    weight: float | None = None
+    category: str | None = None
 
 
 class UserUpdateRequest(BaseModel):
     alias: str | None = Field(default=None, min_length=2, max_length=40)
     role: Role | None = None
     status: UserStatus | None = None
+    username: str | None = Field(default=None, min_length=2, max_length=40)
+    password: str | None = Field(default=None, min_length=4, max_length=80)
+    weight: float | None = Field(default=None, ge=0)
+    category: str | None = Field(default=None, max_length=40)
 
 
 class CompetitionStateInput(BaseModel):

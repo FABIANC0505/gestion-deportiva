@@ -18,10 +18,19 @@ export default function AdminPanel({ session, onLogout, socketMessage, activeAth
   // CRUD User Form states
   const [newAlias, setNewAlias] = useState("");
   const [newRole, setNewRole] = useState("staff");
+  const [newUsername, setNewUsername] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [newWeight, setNewWeight] = useState("");
+  const [newCategory, setNewCategory] = useState("");
+
   const [editingUser, setEditingUser] = useState(null);
   const [editAlias, setEditAlias] = useState("");
   const [editRole, setEditRole] = useState("");
   const [editStatus, setEditStatus] = useState("");
+  const [editUsername, setEditUsername] = useState("");
+  const [editPassword, setEditPassword] = useState("");
+  const [editWeight, setEditWeight] = useState("");
+  const [editCategory, setEditCategory] = useState("");
 
   // Active Competitor state
   const [competitors, setCompetitors] = useState([]);
@@ -115,15 +124,29 @@ export default function AdminPanel({ session, onLogout, socketMessage, activeAth
     event.preventDefault();
     setError("");
     setSuccess("");
-    if (!newAlias.trim()) return;
+    if (!newAlias.trim() || !newUsername.trim() || !newPassword.trim()) {
+      setError("Todos los campos requeridos deben estar completos");
+      return;
+    }
 
     try {
       await apiRequest("/api/auth/register-role", {
         token: session.access_token,
         method: "POST",
-        body: { alias: newAlias.trim(), role: newRole },
+        body: { 
+          alias: newAlias.trim(), 
+          role: newRole,
+          username: newUsername.trim(),
+          password: newPassword,
+          weight: newRole === "competitor" && newWeight ? parseFloat(newWeight) : null,
+          category: newRole === "competitor" && newCategory ? newCategory.trim() : null
+        },
       });
       setNewAlias("");
+      setNewUsername("");
+      setNewPassword("");
+      setNewWeight("");
+      setNewCategory("");
       setSuccess("Usuario registrado exitosamente");
       fetchUsers();
       fetchStats();
@@ -154,6 +177,10 @@ export default function AdminPanel({ session, onLogout, socketMessage, activeAth
     setEditAlias(user.alias);
     setEditRole(user.role);
     setEditStatus(user.status);
+    setEditUsername(user.username || "");
+    setEditPassword("");
+    setEditWeight(user.weight !== undefined && user.weight !== null ? user.weight.toString() : "");
+    setEditCategory(user.category || "");
   }
 
   async function handleUpdate(event) {
@@ -161,10 +188,21 @@ export default function AdminPanel({ session, onLogout, socketMessage, activeAth
     setError("");
     setSuccess("");
     try {
+      const body = { 
+        alias: editAlias.trim(), 
+        role: editRole, 
+        status: editStatus,
+        username: editUsername.trim(),
+        weight: editRole === "competitor" && editWeight ? parseFloat(editWeight) : null,
+        category: editRole === "competitor" && editCategory ? editCategory.trim() : null
+      };
+      if (editPassword) {
+        body.password = editPassword;
+      }
       await apiRequest(`/api/auth/users/${editingUser.id}`, {
         token: session.access_token,
         method: "PATCH",
-        body: { alias: editAlias.trim(), role: editRole, status: editStatus },
+        body: body,
       });
       setEditingUser(null);
       setSuccess("Usuario actualizado");
@@ -710,13 +748,34 @@ export default function AdminPanel({ session, onLogout, socketMessage, activeAth
         <div className="auth-shell" style={{ minHeight: "auto", padding: "20px" }}>
           <h2>Pre-registrar Rol Operativo</h2>
           <form className="auth-form" onSubmit={handleCreate}>
-            <label htmlFor="alias-admin">Alias Operativo</label>
+            <label htmlFor="alias-admin">Alias / Nombre de Exhibición</label>
             <input
               id="alias-admin"
               value={newAlias}
               onChange={(e) => setNewAlias(e.target.value)}
               placeholder="Ej: Juez Fuerza 1, Competidor Flow"
               required
+            />
+
+            <label htmlFor="username-admin">Nombre de Usuario (Credencial)</label>
+            <input
+              id="username-admin"
+              value={newUsername}
+              onChange={(e) => setNewUsername(e.target.value)}
+              placeholder="Ej: admin_fuerza, competidor_flow"
+              required
+              autoComplete="off"
+            />
+
+            <label htmlFor="password-admin">Contraseña</label>
+            <input
+              id="password-admin"
+              type="password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              placeholder="Ingrese contraseña de ingreso"
+              required
+              autoComplete="new-password"
             />
 
             <label htmlFor="role-select">Rol asignado</label>
@@ -740,7 +799,34 @@ export default function AdminPanel({ session, onLogout, socketMessage, activeAth
               <option value="admin">Administrador (Gestor total)</option>
             </select>
 
-            <button className="primary-btn" type="submit">
+            {newRole === "competitor" && (
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginTop: "10px" }}>
+                <div>
+                  <label htmlFor="weight-admin">Peso (kg)</label>
+                  <input
+                    id="weight-admin"
+                    type="number"
+                    step="0.1"
+                    value={newWeight}
+                    onChange={(e) => setNewWeight(e.target.value)}
+                    placeholder="Ej: 72.5"
+                    required
+                  />
+                </div>
+                <div>
+                  <label htmlFor="category-admin">Categoría</label>
+                  <input
+                    id="category-admin"
+                    value={newCategory}
+                    onChange={(e) => setNewCategory(e.target.value)}
+                    placeholder="Ej: Elite, Avanzado"
+                    required
+                  />
+                </div>
+              </div>
+            )}
+
+            <button className="primary-btn" type="submit" style={{ marginTop: "15px" }}>
               Crear Usuario
             </button>
           </form>
@@ -751,8 +837,19 @@ export default function AdminPanel({ session, onLogout, socketMessage, activeAth
           <div className="auth-shell" style={{ minHeight: "auto", padding: "20px", border: "2px solid var(--neon)" }}>
             <h2>Editar Usuario</h2>
             <form className="auth-form" onSubmit={handleUpdate}>
-              <label>Alias</label>
+              <label>Alias / Nombre de Exhibición</label>
               <input value={editAlias} onChange={(e) => setEditAlias(e.target.value)} required />
+
+              <label>Nombre de Usuario</label>
+              <input value={editUsername} onChange={(e) => setEditUsername(e.target.value)} required />
+
+              <label>Contraseña (Dejar en blanco para no cambiar)</label>
+              <input 
+                type="password" 
+                value={editPassword} 
+                onChange={(e) => setEditPassword(e.target.value)} 
+                placeholder="Nueva contraseña" 
+              />
 
               <label>Rol</label>
               <select
@@ -791,7 +888,32 @@ export default function AdminPanel({ session, onLogout, socketMessage, activeAth
                 <option value="active">Activo / Dentro</option>
               </select>
 
-              <div style={{ display: "flex", gap: "10px" }}>
+              {editRole === "competitor" && (
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginTop: "10px" }}>
+                  <div>
+                    <label>Peso (kg)</label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      value={editWeight}
+                      onChange={(e) => setEditWeight(e.target.value)}
+                      placeholder="Ej: 72.5"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label>Categoría</label>
+                    <input
+                      value={editCategory}
+                      onChange={(e) => setEditCategory(e.target.value)}
+                      placeholder="Ej: Elite, Avanzado"
+                      required
+                    />
+                  </div>
+                </div>
+              )}
+
+              <div style={{ display: "flex", gap: "10px", marginTop: "15px" }}>
                 <button className="primary-btn" type="submit" style={{ flex: 1 }}>
                   Guardar
                 </button>
@@ -851,6 +973,14 @@ export default function AdminPanel({ session, onLogout, socketMessage, activeAth
                     >
                       {u.role}
                     </span>
+                    <div style={{ fontSize: "0.85rem", color: "var(--muted)", marginTop: "4px" }}>
+                      Usuario: <code>{u.username || "Ninguno"}</code>
+                    </div>
+                    {u.role === "competitor" && (u.weight || u.category) && (
+                      <div style={{ fontSize: "0.85rem", color: "var(--text)", marginTop: "4px" }}>
+                        ⚖️ {u.weight ? `${u.weight} kg` : "N/A"} | 🏷️ {u.category || "N/A"}
+                      </div>
+                    )}
                     <div style={{ fontSize: "0.85rem", color: "var(--muted)", marginTop: "4px" }}>
                       Estado: <span style={{ color: u.status === "active" ? "var(--green)" : "var(--muted)" }}>{u.status}</span>
                     </div>

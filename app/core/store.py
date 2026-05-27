@@ -27,6 +27,13 @@ def _normalize_user(row: dict) -> dict:
     normalized["id"] = UUID(str(normalized["id"]))
     normalized["role"] = Role(normalized["role"])
     normalized["status"] = UserStatus(normalized["status"])
+    normalized["username"] = normalized.get("username")
+    normalized["password_hash"] = normalized.get("password_hash")
+    if "weight" in normalized and normalized["weight"] is not None:
+        normalized["weight"] = float(normalized["weight"])
+    else:
+        normalized["weight"] = None
+    normalized["category"] = normalized.get("category")
     return normalized
 
 
@@ -72,6 +79,12 @@ class InMemoryStore:
             rows = self.supabase.select(settings.supabase_users_table, {"alias": f"eq.{alias}"}, select="*")
             return _normalize_user(rows[0]) if rows else None
         return next((u for u in self.users.values() if u["alias"].lower() == alias.strip().lower()), None)
+
+    def get_user_by_username(self, username: str) -> dict | None:
+        if self.supabase:
+            rows = self.supabase.select(settings.supabase_users_table, {"username": f"eq.{username}"}, select="*")
+            return _normalize_user(rows[0]) if rows else None
+        return next((u for u in self.users.values() if u.get("username") and u["username"].lower() == username.strip().lower()), None)
 
     def list_users(self) -> list[dict]:
         if self.supabase:

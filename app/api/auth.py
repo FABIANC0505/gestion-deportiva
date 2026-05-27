@@ -4,7 +4,7 @@ from uuid import UUID, uuid4
 from fastapi import APIRouter, Depends, HTTPException
 
 from app.core.config import settings
-from app.core.security import create_access_token, require_roles
+from app.core.security import create_access_token, require_roles, hash_password, verify_password
 from app.core.store import store
 from app.models.schemas import (
     AdminRegisterRoleRequest,
@@ -33,6 +33,10 @@ async def register_express(payload: ExpressRegisterRequest) -> ExpressRegisterRe
         "created_at": datetime.now(UTC),
         "last_check_in_at": None,
         "last_check_out_at": None,
+        "username": None,
+        "password_hash": None,
+        "weight": None,
+        "category": None,
     }
     user = store.create_user(user)
 
@@ -49,24 +53,24 @@ async def register_express(payload: ExpressRegisterRequest) -> ExpressRegisterRe
 
 @router.post("/staff-login", response_model=TokenResponse)
 async def staff_login(payload: StaffLoginRequest) -> TokenResponse:
-    expected_code = settings.staff_access_code
-    if payload.access_code != expected_code:
-        raise HTTPException(status_code=401, detail="Codigo de staff invalido")
-
-    # Find user by alias
-    user = store.get_user_by_alias(payload.alias)
+    # Find user by username
+    user = store.get_user_by_username(payload.username)
     if not user:
-        # Bootstrap first admin: if there are no admins in the DB, and they are trying to login/register as Admin
-        if payload.role == Role.ADMIN and store.count_admins() == 0:
+        # Bootstrap first admin: if there are no admins in the DB, and they are trying to login as admin
+        if payload.username == "admin" and store.count_admins() == 0:
             user_id = uuid4()
             user_data = {
                 "id": user_id,
-                "alias": payload.alias.strip(),
+                "alias": "MasterAdmin",
                 "role": Role.ADMIN,
                 "status": UserStatus.ACTIVE,
                 "created_at": datetime.now(UTC),
                 "last_check_in_at": None,
                 "last_check_out_at": None,
+                "username": "admin",
+                "password_hash": hash_password(payload.password),
+                "weight": None,
+                "category": None,
             }
             user = store.create_user(user_data)
             return TokenResponse(
@@ -74,11 +78,17 @@ async def staff_login(payload: StaffLoginRequest) -> TokenResponse:
                 alias=user["alias"],
                 role=user["role"],
                 access_token=create_access_token(user_id=user_id, role=user["role"]),
+                username=user["username"],
+                weight=user["weight"],
+                category=user["category"],
             )
 
-        raise HTTPException(status_code=401, detail="Usuario no registrado por el Administrador")
+        raise HTTPException(status_code=401, detail="Credenciales incorrectas o usuario no registrado")
 
-    # If found, check if they are operational
+    # If found, check password
+    if not user.get("password_hash") or not verify_password(payload.password, user["password_hash"]):
+        raise HTTPException(status_code=401, detail="Credenciales incorrectas")
+
     if user["role"] not in {Role.ADMIN, Role.STAFF, Role.JUDGE, Role.COMPETITOR}:
         raise HTTPException(status_code=403, detail="Rol no operativo")
 
@@ -87,6 +97,9 @@ async def staff_login(payload: StaffLoginRequest) -> TokenResponse:
         alias=user["alias"],
         role=user["role"],
         access_token=create_access_token(user_id=user["id"], role=user["role"]),
+        username=user.get("username"),
+        weight=user.get("weight"),
+        category=user.get("category"),
     )
 
 
@@ -99,10 +112,14 @@ async def register_role(
     if payload.role not in {Role.ADMIN, Role.STAFF, Role.JUDGE, Role.COMPETITOR}:
         raise HTTPException(status_code=400, detail="Rol operativo invalido")
 
-    # Check if user already exists
-    existing = store.get_user_by_alias(payload.alias)
-    if existing:
+    # Check if user already exists by alias or username
+    existing_alias = store.get_user_by_alias(payload.alias)
+    if existing_alias:
         raise HTTPException(status_code=400, detail="El alias ya esta registrado")
+
+    existing_username = store.get_user_by_username(payload.username)
+    if existing_username:
+        raise HTTPException(status_code=400, detail="El nombre de usuario ya esta registrado")
 
     user_id = uuid4()
     user = {
@@ -113,6 +130,10 @@ async def register_role(
         "created_at": datetime.now(UTC),
         "last_check_in_at": None,
         "last_check_out_at": None,
+        "username": payload.username.strip(),
+        "password_hash": hash_password(payload.password),
+        "weight": payload.weight,
+        "category": payload.category,
     }
     user = store.create_user(user)
 
@@ -121,6 +142,9 @@ async def register_role(
         alias=user["alias"],
         role=user["role"],
         access_token=create_access_token(user_id=user_id, role=user["role"]),
+        username=user["username"],
+        weight=user["weight"],
+        category=user["category"],
     )
 
 
@@ -163,6 +187,25 @@ async def update_user_details(
 
     if payload.status is not None:
         values["status"] = payload.status
+
+    if payload.username is not None:
+        username_clean = payload.username.strip()
+        if username_clean != user.get("username"):
+            existing = store.get_user_by_username(username_clean)
+            if existing:
+                raise HTTPException(status_code=400, detail="El nombre de usuario ya esta registrado")
+            values["username"] = username_clean
+
+    if payload.password is not None:
+        password_clean = payload.password.strip()
+        if password_clean:
+            values["password_hash"] = hash_password(password_clean)
+
+    if payload.weight is not None:
+        values["weight"] = payload.weight
+
+    if payload.category is not None:
+        values["category"] = payload.category
 
     if values:
         user = store.update_user(user_id, values)
